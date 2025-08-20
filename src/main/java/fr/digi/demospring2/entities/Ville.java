@@ -4,6 +4,8 @@ public class Ville {
     private String nom;
     private int nbHabitants;
 
+    public Ville() {}
+
     //Constructor
     public Ville(String nom, int nbHabitants) {
         this.nom = nom;

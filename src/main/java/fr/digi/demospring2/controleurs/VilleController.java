@@ -1,19 +1,30 @@
 package fr.digi.demospring2.controleurs;
 
 import fr.digi.demospring2.entities.Ville;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Validator;
+import jakarta.validation.ConstraintViolation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/villes")
 public class VilleController {
 
     private List<Ville> villes = new ArrayList<>();
+
+    @Autowired
+    private Validator validator;
 
     //constructor
     public VilleController() {
@@ -48,7 +59,18 @@ public class VilleController {
     }
 
     @PostMapping
-    public ResponseEntity<String> ajouterVille(@RequestBody Ville nouvelleVille) {
+    public ResponseEntity<String> ajouterVille(@Valid @RequestBody Ville nouvelleVille, BindingResult bindingResult) {
+
+        if (bindingResult.hasErrors()) {
+            List<String> erreurs = bindingResult.getFieldErrors()
+                    .stream()
+                    .map(FieldError::getDefaultMessage)
+                    .collect(Collectors.toList());
+
+            String messageErreur = String.join(", ", erreurs);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageErreur);
+        }
+
         boolean idExiste = villes.stream()
                 .anyMatch(ville -> ville.getId() == nouvelleVille.getId());
 
@@ -71,6 +93,18 @@ public class VilleController {
 
     @PutMapping("/{id}")
     public ResponseEntity<String> modifierVille(@PathVariable int id, @RequestBody Ville villeModifiee) {
+
+        Set<ConstraintViolation<Ville>> violations = validator.validate(villeModifiee);
+
+        if (!violations.isEmpty()) {
+            List<String> erreurs = violations.stream()
+                    .map(ConstraintViolation::getMessage)
+                    .collect(Collectors.toList());
+
+            String messageErreur = String.join(", ", erreurs);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageErreur);
+        }
+
         Optional<Ville> villeExistante = villes.stream()
                 .filter(v -> v.getId() == id)
                 .findFirst();

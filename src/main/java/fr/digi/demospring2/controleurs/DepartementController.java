@@ -1,7 +1,10 @@
 package fr.digi.demospring2.controleurs;
 
+import fr.digi.demospring2.dto.DepartementDTO;
+import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
+import fr.digi.demospring2.mappers.VilleDepartementMapper;
 import fr.digi.demospring2.services.DepartementService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
@@ -13,6 +16,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,25 +29,30 @@ public class DepartementController {
     private DepartementService dptService;
 
     @Autowired
+    private VilleDepartementMapper mapper;
+
+    @Autowired
     private Validator validator;
 
     /**
-     * GET /departements - Retourne la liste des départements
+     * GET /departements - Retourne la liste des départements avec leurs villes
      */
     @GetMapping
-    public List<Departement> getDepartements() {
-        return dptService.extractDepartements();
+    public List<DepartementDTO> getDepartements() {
+        List<Departement> departements = dptService.extractDepartements();
+        return mapper.toDepartementDTO(departements);
     }
 
     /**
      * GET /departements/{id} - Retourne un département par son Id
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Departement> getDepartementById(@PathVariable int id) {
+    public ResponseEntity<DepartementDTO> getDepartementById(@PathVariable int id) {
         Departement dpt = dptService.extractDepartement(id);
 
-        if (dpt != null) {
-            return ResponseEntity.ok(dpt);
+        if (dpt != null){
+            DepartementDTO dto = mapper.toDepartementDTO(dpt);
+            return ResponseEntity.ok(dto);
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -53,11 +62,12 @@ public class DepartementController {
      * GET /departements/code/{code} - Retourne un département par son code
      */
     @GetMapping("/code/{code}")
-    public ResponseEntity<Departement> getDepartementByCode(@PathVariable String code) {
+    public ResponseEntity<DepartementDTO> getDepartementByCode(@PathVariable String code) {
         Departement dpt = dptService.extractDepartementByCode(code);
 
-        if (dpt != null) {
-            return ResponseEntity.ok(dpt);
+        if (dpt != null){
+            DepartementDTO dto = mapper.toDepartementDTO(dpt);
+            return ResponseEntity.ok(dto);
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -67,7 +77,7 @@ public class DepartementController {
      * POST /departements - Insère un département
      */
     @PostMapping
-    public ResponseEntity<String> ajouterDepartement(@Valid @RequestBody Departement newDpt, BindingResult bindingResult) {
+    public ResponseEntity<String> ajouterDepartement(@Valid @RequestBody DepartementDTO dptDTO, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             List<String> erreurs = bindingResult.getFieldErrors()
                     .stream()
@@ -78,12 +88,13 @@ public class DepartementController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageErreur);
         }
 
-        Departement dptExistant = dptService.extractDepartementByCode(newDpt.getCode());
+        Departement dptExistant = dptService.extractDepartementByCode(dptDTO.getCode());
         if (dptExistant != null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Le département existe déjà");
         }
 
+        Departement newDpt = new Departement(dptDTO.getCode(), dptDTO.getNom());
         dptService.insertDepartement(newDpt);
         return ResponseEntity.ok("Département inséré avec succès");
     }
@@ -92,8 +103,8 @@ public class DepartementController {
      * PUT /departements/{id} - Modifie un département
      */
     @PutMapping("/{id}")
-    public ResponseEntity<String> modifierDepartement(@PathVariable int id, @RequestBody Departement dptEdited) {
-        Set<ConstraintViolation<Departement>> violations = validator.validate(dptEdited);
+    public ResponseEntity<String> modifierDepartement(@PathVariable int id, @RequestBody DepartementDTO dptDTO) {
+        Set<ConstraintViolation<DepartementDTO>> violations = validator.validate(dptDTO);
 
         if (!violations.isEmpty()) {
             List<String> erreurs = violations.stream()
@@ -106,7 +117,8 @@ public class DepartementController {
 
         Departement dptExistant = dptService.extractDepartement(id);
         if (dptExistant != null) {
-            dptService.modifierDepartement(id, dptEdited);
+            mapper.updateDepartementFromDTO(dptExistant, dptDTO);
+            dptService.modifierDepartement(id, dptExistant);
             return ResponseEntity.ok("Département modifié avec succès");
         } else {
             return ResponseEntity.notFound().build();
@@ -132,7 +144,7 @@ public class DepartementController {
      * GET /departements/{id}/plus-grandes-villes/{n} - Retourne les n plus grandes villes d'un département
      */
     @GetMapping("/{id}/plus-grandes-villes/{n}")
-    public ResponseEntity<List<Ville>> getNPlusGrandesVilles(@PathVariable int id, @PathVariable int n) {
+    public ResponseEntity<List<VilleDTO>> getNPlusGrandesVilles(@PathVariable int id, @PathVariable int n) {
         Departement dpt = dptService.extractDepartement(id);
 
         if (dpt == null) {
@@ -144,14 +156,15 @@ public class DepartementController {
         }
 
         List<Ville> villes = dptService.getNPlusGrandesVilles(id, n);
-        return ResponseEntity.ok(villes);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
 
     }
     /**
      * GET /departements/{id}/villes-population?min={min}&max={max} - Retourne les villes d'un département ayant une population comprise entre deux valeurs
      */
     @GetMapping("/{id}/villes-population")
-    public ResponseEntity<List<Ville>> getVillesParPopulation(
+    public ResponseEntity<List<VilleDTO>> getVillesParPopulation(
             @PathVariable int id,
             @RequestParam int min,
             @RequestParam int max) {
@@ -167,7 +180,8 @@ public class DepartementController {
         }
 
         List<Ville> villes = dptService.getVillesParPopulation(id, min, max);
-        return ResponseEntity.ok(villes);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
     }
 
 

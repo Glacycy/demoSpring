@@ -1,5 +1,6 @@
 package fr.digi.demospring2.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.persistence.Table;
@@ -28,7 +29,7 @@ public class Ville {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "departement_id", nullable = false)
-    @JsonIgnore
+    @JsonBackReference
     private Departement departement;
 
     //Constructeurs

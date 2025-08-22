@@ -10,31 +10,46 @@ import jakarta.validation.constraints.Size;
  */
 public class VilleDTO {
 
+
     @NotBlank(message = "Le nom ne doit pas être vide")
     @Size(min = 2, message = "Le nom de la ville doit contenir au moins 2 caractères")
     private String nom;
 
-    @Min(value = 1, message = "Le nombre d'habitants doitêtre supérieur ou égal à 1")
+    @Min(value = 1, message = "Le nombre d'habitants doit être supérieur ou égal à 1")
     private int nbHabitants;
 
     @NotNull(message = "L'id du département est obligatoire")
     private Integer departementId;
 
+    private String codeDepartement;
+    private String nomDepartement;
+
     //Constructeurs
     public VilleDTO() {}
 
-    public VilleDTO(String nom, int nbHabitants, Integer departementId) {
+    public VilleDTO(String nom, int nbHabitants, String codeDepartement, String nomDepartement, Integer departementId) {
         this.nom = nom;
         this.nbHabitants = nbHabitants;
+        this.codeDepartement = codeDepartement;
+        this.nomDepartement = nomDepartement;
         this.departementId = departementId;
+
     }
 
     //Getters
+
     public String getNom() {
         return nom;
     }
     public int getNbHabitants() {
         return nbHabitants;
+    }
+
+    public String getCodeDepartement() {
+        return codeDepartement;
+    }
+    public String getNomDepartement() {
+        return nomDepartement;
     }
     public Integer getDepartementId() {
         return departementId;
@@ -46,6 +61,13 @@ public class VilleDTO {
     }
     public void setNbHabitants(int nbHabitants) {
         this.nbHabitants = nbHabitants;
+    }
+
+    public void setCodeDepartement(String codeDepartement) {
+        this.codeDepartement = codeDepartement;
+    }
+    public void setNomDepartement(String nomDepartement) {
+        this.nomDepartement = nomDepartement;
     }
     public void setDepartementId(Integer departementId) {
         this.departementId = departementId;

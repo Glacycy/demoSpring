@@ -1,6 +1,8 @@
 package fr.digi.demospring2.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -26,7 +28,7 @@ public class Departement {
     private String nom;
 
     @OneToMany(mappedBy = "departement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
+    @JsonManagedReference
     private List<Ville> villes = new ArrayList<>();
 
     //Constructeurs

@@ -3,6 +3,7 @@ package fr.digi.demospring2.controleurs;
 import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
+import fr.digi.demospring2.mappers.VilleDepartementMapper;
 import fr.digi.demospring2.services.VilleService;
 import fr.digi.demospring2.services.DepartementService;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Validator;
 import jakarta.validation.ConstraintViolation;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -31,25 +33,30 @@ public class VilleController {
     private DepartementService departementService;
 
     @Autowired
+    private VilleDepartementMapper mapper;
+
+    @Autowired
     private Validator validator;
 
     /**
      * GET /villes - Méthode qui retourne la liste des villes
      */
     @GetMapping
-    public List<Ville> getVilles() {
-        return villeService.extractVilles();
+    public List<VilleDTO> getVilles() {
+        List<Ville> villes = villeService.extractVilles();
+        return mapper.toVilleDTO(villes);
     }
 
     /**
      * GET /villes/{id} - Méthode qui retourne une ville par son id
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Ville> getVilleById(@PathVariable int id) {
+    public ResponseEntity<VilleDTO> getVilleById(@PathVariable int id) {
         Ville ville = villeService.extractVille(id);
 
         if (ville != null) {
-            return ResponseEntity.ok(ville);
+            VilleDTO villeDTO = mapper.toVilleDTO(ville);
+            return ResponseEntity.ok(villeDTO);
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -59,11 +66,12 @@ public class VilleController {
      * GET /villes/nom/{nom} - Méthode qui retourne une ville par son nom
      */
     @GetMapping("/nom/{nom}")
-    public ResponseEntity<Ville> getVilleByNom(@PathVariable String nom) {
+    public ResponseEntity<VilleDTO> getVilleByNom(@PathVariable String nom) {
         Ville ville = villeService.extractVille(nom);
 
         if (ville != null) {
-            return ResponseEntity.ok(ville);
+            VilleDTO villeDTO = mapper.toVilleDTO(ville);
+            return ResponseEntity.ok(villeDTO);
         } else {
             return ResponseEntity.notFound().build();
         }
@@ -111,9 +119,9 @@ public class VilleController {
      * PUT /villes/{id} - Méthode qui modifie une ville
      */
     @PutMapping("/{id}")
-    public ResponseEntity<String> modifierVille(@PathVariable int id, @RequestBody Ville villeModifiee) {
+    public ResponseEntity<String> modifierVille(@PathVariable int id, @RequestBody VilleDTO villeDTO) {
 
-        Set<ConstraintViolation<Ville>> violations = validator.validate(villeModifiee);
+        Set<ConstraintViolation<VilleDTO>> violations = validator.validate(villeDTO);
 
         if (!violations.isEmpty()) {
             List<String> erreurs = violations.stream()
@@ -126,7 +134,18 @@ public class VilleController {
 
         Ville villeExistante = villeService.extractVille(id);
         if (villeExistante != null) {
-            villeService.modifierVille(id, villeModifiee);
+            mapper.updateVilleFromDTO(villeExistante, villeDTO);
+
+            if (villeDTO.getDepartementId() != null) {
+                Departement nouveauDepartement = departementService.extractDepartement(villeDTO.getDepartementId());
+                if (nouveauDepartement == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Le département avec l'ID " + villeDTO.getDepartementId() + " n'existe pas");
+                }
+                villeExistante.setDepartement(nouveauDepartement);
+            }
+
+            villeService.modifierVille(id, villeExistante);
             return ResponseEntity.ok("Ville modifiée avec succès");
         } else {
             return ResponseEntity.notFound().build();

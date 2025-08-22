@@ -17,11 +17,12 @@ public class VilleDao {
     private EntityManager em;
 
     /**
-     * Méthode qui retourne la liste des villes
+     * Méthode qui retourne la liste des villes avec leurs départements
      * @return List<Ville>
      */
     public List<Ville> extractVilles() {
-        TypedQuery<Ville> query = em.createQuery("select v from Ville v", Ville.class);
+        TypedQuery<Ville> query = em.createQuery(
+                "select v from Ville v join fetch v.departement", Ville.class);
         return query.getResultList();
     }
 
@@ -31,7 +32,12 @@ public class VilleDao {
      * @return Ville
      */
     public Ville extractVille(int idVille) {
-        return em.find(Ville.class, idVille);
+        TypedQuery<Ville> query = em.createQuery(
+                "select v from Ville v join fetch v.departement where v.id = :idVille", Ville.class);
+        query.setParameter("idVille", idVille);
+
+        List<Ville> villes = query.getResultList();
+        return villes.isEmpty() ? null : villes.getFirst();
     }
 
     /**
@@ -41,7 +47,7 @@ public class VilleDao {
      */
     public Ville extractVille(String nom) {
         TypedQuery<Ville> query = em.createQuery(
-                "select v from Ville v where v.nom = :nom", Ville.class);
+                "select v from Ville v join fetch v.departement where v.nom = :nom", Ville.class);
         query.setParameter("nom", nom);
 
         List<Ville> villes = query.getResultList();

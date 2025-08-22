@@ -18,11 +18,12 @@ public class DepartementDao {
     private EntityManager em;
 
     /**
-     * Méthode qui retourne la liste des départements
+     * Méthode qui retourne la liste des départements avec leurs villes
      * @return List<Departement>
      */
     public List<Departement> extractDepartements() {
-        TypedQuery<Departement> query = em.createQuery("SELECT d FROM Departement d", Departement.class);
+        TypedQuery<Departement> query = em.createQuery(
+                "SELECT DISTINCT d FROM Departement d LEFT JOIN FETCH d.villes", Departement.class);
         return query.getResultList();
     }
 
@@ -32,7 +33,12 @@ public class DepartementDao {
      * @return Departement
      */
     public Departement extractDepartement(int idDpt) {
-        return em.find(Departement.class, idDpt);
+        TypedQuery<Departement> query = em.createQuery(
+                "SELECT d FROM Departement d LEFT JOIN FETCH d.villes WHERE d.id = :idDpt", Departement.class);
+        query.setParameter("idDpt", idDpt);
+
+        List<Departement> departements = query.getResultList();
+        return departements.isEmpty() ? null : departements.getFirst();
     }
 
     /**
@@ -42,7 +48,7 @@ public class DepartementDao {
      */
     public Departement extractDepartementByCode(String codeDpt) {
         TypedQuery<Departement> query = em.createQuery(
-                "SELECT d FROM Departement d WHERE d.code = :codeDpt", Departement.class);
+                "SELECT d FROM Departement d LEFT JOIN FETCH d.villes WHERE d.code = :codeDpt", Departement.class);
         query.setParameter("codeDpt", codeDpt);
 
         List<Departement> departements = query.getResultList();
@@ -90,7 +96,7 @@ public class DepartementDao {
      */
     public List<Ville> getNPlusGrandesVilles(int idDpt, int n) {
         TypedQuery<Ville> query = em.createQuery(
-                "SELECT v FROM Ville v WHERE v.departement.id = :idDpt ORDER BY v.nbHabitants DESC", Ville.class);
+                "SELECT v FROM Ville v JOIN FETCH v.departement WHERE v.departement.id = :idDpt ORDER BY v.nbHabitants DESC", Ville.class);
         query.setParameter("idDpt", idDpt);
         query.setMaxResults(n);
         return query.getResultList();
@@ -105,7 +111,7 @@ public class DepartementDao {
      */
     public List<Ville> getVillesParPopulation(int idDpt, int min, int max) {
         TypedQuery<Ville> query = em.createQuery(
-                "SELECT v FROM Ville v WHERE v.departement.id = :idDpt AND v.nbHabitants BETWEEN :min AND :max ORDER BY v.nbHabitants DESC", Ville.class);
+                "SELECT v FROM Ville v JOIN FETCH v.departement WHERE v.departement.id = :idDpt AND v.nbHabitants BETWEEN :min AND :max ORDER BY v.nbHabitants DESC", Ville.class);
         query.setParameter("idDpt", idDpt);
         query.setParameter("min", min);
         query.setParameter("max", max);

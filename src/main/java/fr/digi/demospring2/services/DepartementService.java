@@ -15,7 +15,7 @@ public class DepartementService {
     private DepartementDao dptDao;
 
     /**
-     * Méthode qui retourne la liste des départements
+     * Méthode qui retourne la liste des départements avec leurs villes
      * @return List<Departement>
      */
     public List<Departement> extractDepartements() {

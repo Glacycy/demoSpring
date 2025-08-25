@@ -1,25 +1,26 @@
 package fr.digi.demospring2.services;
 
-import fr.digi.demospring2.dao.DepartementDao;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
+import fr.digi.demospring2.repositories.DepartementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DepartementService {
 
     @Autowired
-    private DepartementDao dptDao;
+    private DepartementRepository departementRepository;
 
     /**
      * Méthode qui retourne la liste des départements avec leurs villes
      * @return List<Departement>
      */
     public List<Departement> extractDepartements() {
-        return dptDao.extractDepartements();
+        return departementRepository.findAllWithVilles();
     }
 
     /**
@@ -28,7 +29,8 @@ public class DepartementService {
      * @return Departement
      */
     public Departement extractDepartement(int idDpt) {
-        return dptDao.extractDepartement(idDpt);
+        Optional<Departement> departement = departementRepository.findByIdWithVilles(idDpt);
+        return departement.orElse(null);
     }
 
     /**
@@ -37,7 +39,8 @@ public class DepartementService {
      * @return Departement
      */
     public Departement extractDepartementByCode(String codeDpt) {
-        return dptDao.extractDepartementByCode(codeDpt);
+        Optional<Departement> departement = departementRepository.findByCodeWithVilles(codeDpt);
+        return departement.orElse(null);
     }
 
     /**
@@ -46,8 +49,8 @@ public class DepartementService {
      * @return List<Departement>
      */
     public List<Departement> insertDepartement(Departement dpt) {
-        dptDao.insertDepartement(dpt);
-        return dptDao.extractDepartements();
+        departementRepository.save(dpt);
+        return extractDepartements();
     }
 
     /**
@@ -57,13 +60,14 @@ public class DepartementService {
      * @return List<Departement>
      */
     public List<Departement> modifierDepartement(int idDpt, Departement dptEdited) {
-        Departement dptExistant = dptDao.extractDepartement(idDpt);
-        if (dptExistant != null) {
+        Optional<Departement> dptOptional = departementRepository.findById(idDpt);
+        if (dptOptional.isPresent()) {
+            Departement dptExistant = dptOptional.get();
             dptExistant.setCode(dptEdited.getCode());
             dptExistant.setNom(dptEdited.getNom());
-            dptDao.modifierDepartement(dptExistant);
+            departementRepository.save(dptExistant);
         }
-        return dptDao.extractDepartements();
+        return extractDepartements();
     }
 
     /**
@@ -72,8 +76,10 @@ public class DepartementService {
      * @return List<Departement>
      */
     public List<Departement> supprimerDepartement(int idDpt) {
-        dptDao.supprimerDepartement(idDpt);
-        return dptDao.extractDepartements();
+        if (departementRepository.existsById(idDpt)) {
+            departementRepository.deleteById(idDpt);
+        }
+        return extractDepartements();
     }
 
     /**
@@ -83,7 +89,8 @@ public class DepartementService {
      * @return List<Ville>
      */
     public List<Ville> getNPlusGrandesVilles(int idDpt, int n) {
-        return dptDao.getNPlusGrandesVilles(idDpt, n);
+        List<Ville> toutes = departementRepository.findTopVillesByDepartementId(idDpt);
+        return toutes.stream().limit(n).toList();
     }
 
     /**
@@ -94,6 +101,6 @@ public class DepartementService {
      * @return List<Ville>
      */
     public List<Ville> getVillesParPopulation(int idDpt, int min, int max) {
-        return dptDao.getVillesParPopulation(idDpt, min, max);
+        return departementRepository.findVillesByDepartementIdAndPopulationBetween(idDpt, min, max);
     }
 }

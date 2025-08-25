@@ -5,6 +5,7 @@ import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
 import fr.digi.demospring2.mappers.VilleDepartementMapper;
+import fr.digi.demospring2.repositories.DepartementRepository;
 import fr.digi.demospring2.services.DepartementService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
@@ -16,8 +17,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,6 +28,9 @@ public class DepartementController {
 
     @Autowired
     private DepartementService dptService;
+
+    @Autowired
+    private DepartementRepository departementRepository;
 
     @Autowired
     private VilleDepartementMapper mapper;
@@ -88,14 +92,14 @@ public class DepartementController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageErreur);
         }
 
-        Departement dptExistant = dptService.extractDepartementByCode(dptDTO.getCode());
-        if (dptExistant != null) {
+        Optional<Departement> dptExistant = departementRepository.findByCode(dptDTO.getCode());
+        if (dptExistant.isPresent()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Le département existe déjà");
         }
 
         Departement newDpt = new Departement(dptDTO.getCode(), dptDTO.getNom());
-        dptService.insertDepartement(newDpt);
+        departementRepository.save(newDpt);
         return ResponseEntity.ok("Département inséré avec succès");
     }
 
@@ -115,15 +119,15 @@ public class DepartementController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageErreur);
         }
 
-        Departement dptExistant = dptService.extractDepartement(id);
-        if (dptExistant != null) {
+        Optional<Departement> dptOptional = departementRepository.findById(id);
+        if (dptOptional.isPresent()) {
+            Departement dptExistant = dptOptional.get();
             mapper.updateDepartementFromDTO(dptExistant, dptDTO);
-            dptService.modifierDepartement(id, dptExistant);
+            departementRepository.save(dptExistant);
             return ResponseEntity.ok("Département modifié avec succès");
         } else {
             return ResponseEntity.notFound().build();
         }
-
     }
 
     /**
@@ -131,9 +135,8 @@ public class DepartementController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<String> supprimerDepartement(@PathVariable int id) {
-        Departement dptExistant = dptService.extractDepartement(id);
-        if (dptExistant != null) {
-            dptService.supprimerDepartement(id);
+        if (departementRepository.existsById(id)) {
+            departementRepository.deleteById(id);
             return ResponseEntity.ok("Département supprimé avec succès");
         } else {
             return ResponseEntity.notFound().build();
@@ -145,9 +148,7 @@ public class DepartementController {
      */
     @GetMapping("/{id}/plus-grandes-villes/{n}")
     public ResponseEntity<List<VilleDTO>> getNPlusGrandesVilles(@PathVariable int id, @PathVariable int n) {
-        Departement dpt = dptService.extractDepartement(id);
-
-        if (dpt == null) {
+        if (!departementRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -158,8 +159,8 @@ public class DepartementController {
         List<Ville> villes = dptService.getNPlusGrandesVilles(id, n);
         List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
         return ResponseEntity.ok(villesDTO);
-
     }
+
     /**
      * GET /departements/{id}/villes-population?min={min}&max={max} - Retourne les villes d'un département ayant une population comprise entre deux valeurs
      */
@@ -169,9 +170,7 @@ public class DepartementController {
             @RequestParam int min,
             @RequestParam int max) {
 
-        Departement dpt = dptService.extractDepartement(id);
-
-        if (dpt == null) {
+        if (!departementRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -183,8 +182,4 @@ public class DepartementController {
         List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
         return ResponseEntity.ok(villesDTO);
     }
-
-
-
-
 }

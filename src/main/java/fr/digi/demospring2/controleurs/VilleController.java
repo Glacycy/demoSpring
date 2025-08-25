@@ -4,10 +4,14 @@ import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
 import fr.digi.demospring2.mappers.VilleDepartementMapper;
-import fr.digi.demospring2.services.VilleService;
+import fr.digi.demospring2.repositories.VilleRepository;
 import fr.digi.demospring2.services.DepartementService;
+import fr.digi.demospring2.services.VilleService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -17,8 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Validator;
 import jakarta.validation.ConstraintViolation;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,12 +43,17 @@ public class VilleController {
     private Validator validator;
 
     /**
-     * GET /villes - Méthode qui retourne la liste des villes
+     * GET /villes - Méthode qui retourne la liste paginée des villes
      */
     @GetMapping
-    public List<VilleDTO> getVilles() {
-        List<Ville> villes = villeService.extractVilles();
-        return mapper.toVilleDTO(villes);
+    public ResponseEntity<Page<VilleDTO>> getVilles(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Ville> villes = villeService.extractVillesPaginated(pageable);
+        Page<VilleDTO> villesDTO = villes.map(mapper::toVilleDTO);
+        return ResponseEntity.ok(villesDTO);
     }
 
     /**
@@ -75,6 +84,114 @@ public class VilleController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * GET /villes/recherche/nom/{prefix} - Recherche des villes dont le nom commence par prefix
+     */
+    @GetMapping("/recherche/nom/{prefix}")
+    public ResponseEntity<List<VilleDTO>> getVillesCommencantPar(@PathVariable String prefix) {
+        List<Ville> villes = villeService.findVillesStartingWith(prefix);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /villes/population/min/{min} - Villes avec population supérieure à min
+     */
+    @GetMapping("/population/min/{min}")
+    public ResponseEntity<List<VilleDTO>> getVillesPopulationMin(@PathVariable int min) {
+        if (min < 0) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<Ville> villes = villeService.findVillesPopulationMin(min);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /villes/population?min={min}&max={max} - Villes avec population entre min et max
+     */
+    @GetMapping("/population")
+    public ResponseEntity<List<VilleDTO>> getVillesPopulationEntre(
+            @RequestParam int min,
+            @RequestParam int max) {
+
+        if (min < 0 || max < 0 || min > max) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<Ville> villes = villeService.findVillesPopulationBetween(min, max);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /villes/departement/{id}/population/min/{min} - Villes d'un département avec population > min
+     */
+    @GetMapping("/departement/{id}/population/min/{min}")
+    public ResponseEntity<List<VilleDTO>> getVillesDepartementPopulationMin(
+            @PathVariable int id,
+            @PathVariable int min) {
+
+        if (min < 0) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Departement departement = departementService.extractDepartement(id);
+        if (departement == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Ville> villes = villeService.findVillesDepartementPopulationMin(id, min);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /villes/departement/{id}/population?min={min}&max={max} - Villes d'un département avec population entre min et max
+     */
+    @GetMapping("/departement/{id}/population")
+    public ResponseEntity<List<VilleDTO>> getVillesDepartementPopulationEntre(
+            @PathVariable int id,
+            @RequestParam int min,
+            @RequestParam int max) {
+
+        if (min < 0 || max < 0 || min > max) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Departement departement = departementService.extractDepartement(id);
+        if (departement == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Ville> villes = villeService.findVillesDepartementPopulationBetween(id, min, max);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /villes/departement/{id}/top/{n} - Les n villes les plus peuplées d'un département
+     */
+    @GetMapping("/departement/{id}/top/{n}")
+    public ResponseEntity<List<VilleDTO>> getTopNVillesDepartement(
+            @PathVariable int id,
+            @PathVariable int n) {
+
+        if (n <= 0) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Departement departement = departementService.extractDepartement(id);
+        if (departement == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<Ville> villes = villeService.findTopNVillesDepartement(id, n);
+        List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
+        return ResponseEntity.ok(villesDTO);
     }
 
     /**
@@ -145,7 +262,7 @@ public class VilleController {
                 villeExistante.setDepartement(nouveauDepartement);
             }
 
-            villeService.modifierVille(id, villeExistante);
+            villeService.modifierVille(villeExistante);
             return ResponseEntity.ok("Ville modifiée avec succès");
         } else {
             return ResponseEntity.notFound().build();

@@ -18,12 +18,12 @@ public class Departement {
     private Integer id;
 
     @NotBlank(message = "le code ne doit pas être vide")
-    @Size(min = 2, max = 3, message = "Le code du departement doit contenir 2 ou 3 caractères")
+    @Size(min = 2, max = 3, message = "Le code du département doit contenir 2 ou 3 caractères")
     @Column(name = "code", unique = true)
     private String code;
 
     @NotBlank(message = "le nom ne doit pas être vide")
-    @Size(min = 2, message = "Le nom du departement doit contenir au moins 2 caractères")
+    @Size(min = 2, message = "Le nom du département doit contenir au moins 2 caractères")
     @Column(name = "nom")
     private String nom;
 

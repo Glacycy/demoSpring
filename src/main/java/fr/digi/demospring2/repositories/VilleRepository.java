@@ -13,9 +13,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VilleRepository extends CrudRepository<Ville, Integer>, PagingAndSortingRepository<Ville, Integer> {
-
-    // ========== MÉTHODES AVEC JOIN FETCH POUR ÉVITER LazyInitializationException ==========
-
     /**
      * Recherche d'une ville par ID avec chargement EAGER du département
      * @param id ID de la ville
@@ -107,8 +104,6 @@ public interface VilleRepository extends CrudRepository<Ville, Integer>, PagingA
      */
     @Query("SELECT v FROM Ville v JOIN FETCH v.departement WHERE v.departement.code = :code")
     List<Ville> findByDepartementCodeWithDepartement(@Param("code") String code);
-
-    // ========== MÉTHODES HÉRITÉES (PEUVENT CAUSER LazyInitializationException) ==========
 
     Ville findByNom(String nom);
     List<Ville> findByDepartement(Departement departement);

@@ -1,5 +1,6 @@
 package fr.digi.demospring2.controleurs;
 
+import fr.digi.demospring2.docs.DepartementApiDoc;
 import fr.digi.demospring2.dto.DepartementDTO;
 import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/departements")
-public class DepartementController {
+public class DepartementController implements DepartementApiDoc {
 
     @Autowired
     private DepartementService dptService;

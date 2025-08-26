@@ -1,5 +1,6 @@
 package fr.digi.demospring2.controleurs;
 
+import fr.digi.demospring2.docs.VilleApiDoc;
 import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/villes")
-public class VilleController {
+public class VilleController implements VilleApiDoc {
 
     @Autowired
     private VilleService villeService;

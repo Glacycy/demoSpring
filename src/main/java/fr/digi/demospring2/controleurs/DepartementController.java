@@ -1,5 +1,9 @@
 package fr.digi.demospring2.controleurs;
 
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
+import com.itextpdf.text.pdf.PdfWriter;
 import fr.digi.demospring2.docs.DepartementApiDoc;
 import fr.digi.demospring2.dto.DepartementDTO;
 import fr.digi.demospring2.dto.VilleDTO;
@@ -9,6 +13,7 @@ import fr.digi.demospring2.exceptions.FunctionalException;
 import fr.digi.demospring2.mappers.VilleDepartementMapper;
 import fr.digi.demospring2.repositories.DepartementRepository;
 import fr.digi.demospring2.services.DepartementService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
 import jakarta.validation.Validator;
@@ -19,6 +24,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -183,5 +189,110 @@ public class DepartementController implements DepartementApiDoc {
         List<Ville> villes = dptService.getVillesParPopulation(id, min, max);
         List<VilleDTO> villesDTO = mapper.toVilleDTO(villes);
         return ResponseEntity.ok(villesDTO);
+    }
+
+    /**
+     * GET /departements/{code}/export/pdf - Exporte les informations d'un département au format PDF
+     * @param code code du département
+     * @param response HttpServletResponse pour configurer la réponse HTTP
+     * @throws DocumentException si erreur lors de la création du PDF
+     * @throws IOException si erreur d'écriture
+     */
+    @GetMapping("/{code}/export/pdf")
+    public void exportDepartementPDF(
+            @PathVariable String code,
+            HttpServletResponse response) throws DocumentException, IOException {
+
+        Departement departement = dptService.extractDepartementByCode(code);
+
+        if (departement == null) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND, "Département non trouvé avec le code : " + code);
+            return;
+        }
+
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=\"departement_" + code + ".pdf\"");
+
+        Document document = new Document();
+        PdfWriter.getInstance(document, response.getOutputStream());
+
+        document.open();
+
+        try {
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
+            Paragraph title = new Paragraph("Département : " + departement.getNom(), titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            title.setSpacingAfter(20);
+            document.add(title);
+
+            Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD);
+            Font normalFont = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL);
+
+            Paragraph codeInfo = new Paragraph();
+            codeInfo.add(new Phrase("Code du département : ", boldFont));
+            codeInfo.add(new Phrase(departement.getCode(), normalFont));
+            codeInfo.setSpacingAfter(10);
+            document.add(codeInfo);
+
+            Paragraph nomInfo = new Paragraph();
+            nomInfo.add(new Phrase("Nom du département : ", boldFont));
+            nomInfo.add(new Phrase(departement.getNom(), normalFont));
+            nomInfo.setSpacingAfter(20);
+            document.add(nomInfo);
+
+            Paragraph villesTitle = new Paragraph("Liste des villes", boldFont);
+            villesTitle.setSpacingAfter(15);
+            document.add(villesTitle);
+
+            PdfPTable table = new PdfPTable(2);
+            table.setWidthPercentage(100);
+            table.setSpacingBefore(10);
+
+            PdfPCell headerNom = new PdfPCell(new Phrase("Nom de la ville", boldFont));
+            PdfPCell headerPopulation = new PdfPCell(new Phrase("Population", boldFont));
+            headerNom.setBackgroundColor(BaseColor.LIGHT_GRAY);
+            headerPopulation.setBackgroundColor(BaseColor.LIGHT_GRAY);
+            headerNom.setPadding(8);
+            headerPopulation.setPadding(8);
+            table.addCell(headerNom);
+            table.addCell(headerPopulation);
+
+            List<Ville> villes = departement.getVilles();
+
+            if (villes.isEmpty()) {
+                PdfPCell noVilleCell = new PdfPCell(new Phrase("Aucune ville enregistrée", normalFont));
+                noVilleCell.setColspan(2);
+                noVilleCell.setPadding(8);
+                noVilleCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                table.addCell(noVilleCell);
+            } else {
+                villes.sort((v1, v2) -> Integer.compare(v2.getNbHabitants(), v1.getNbHabitants()));
+
+                for (Ville ville : villes) {
+                    PdfPCell nomCell = new PdfPCell(new Phrase(ville.getNom(), normalFont));
+                    PdfPCell populationCell = new PdfPCell(new Phrase(String.valueOf(ville.getNbHabitants()), normalFont));
+                    nomCell.setPadding(8);
+                    populationCell.setPadding(8);
+                    table.addCell(nomCell);
+                    table.addCell(populationCell);
+                }
+            }
+
+            document.add(table);
+
+            Paragraph footer = new Paragraph();
+            footer.setSpacingBefore(30);
+            footer.add(new Phrase("Total de villes : ", boldFont));
+            footer.add(new Phrase(String.valueOf(villes.size()), normalFont));
+            footer.add(new Phrase("\nPopulation totale du département : ", boldFont));
+
+            long totalPopulation = villes.stream().mapToLong(Ville::getNbHabitants).sum();
+            footer.add(new Phrase(totalPopulation + " habitants", normalFont));
+
+            document.add(footer);
+
+        } finally {
+            document.close();
+        }
     }
 }

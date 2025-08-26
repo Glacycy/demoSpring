@@ -9,6 +9,7 @@ import fr.digi.demospring2.mappers.VilleDepartementMapper;
 import fr.digi.demospring2.repositories.VilleRepository;
 import fr.digi.demospring2.services.DepartementService;
 import fr.digi.demospring2.services.VilleService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Validator;
 import jakarta.validation.ConstraintViolation;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -298,5 +301,44 @@ public class VilleController implements VilleApiDoc {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * GET /villes/export/csv?min={min} - Exporte au format CSV les villes avec population > min
+     * @param min population minimale
+     * @param response HttpServletResponse pour configurer la réponse HTTP
+     * @throws IOException si erreur d'écriture
+     * @throws FunctionalException si aucune ville trouvée
+     */
+    @GetMapping("/export/csv")
+    public void exportVillesCSV(
+            @RequestParam int min,
+            HttpServletResponse response) throws IOException, FunctionalException {
+
+        if (min < 0) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "La population minimale ne peut pas être négative");
+            return;
+        }
+
+        List<Ville> villes = villeService.findVillesPopulationMin(min);
+
+        response.setContentType("text/csv; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"villes_population_min_" + min + ".csv\"");
+
+        PrintWriter writer = response.getWriter();
+
+        writer.println("nom_ville,nombre_habitants,code_departement,nom_departement");
+
+        for (Ville ville : villes) {
+            writer.printf("%s,%d,%s,%s%n",
+                    ville.getNom(),
+                    ville.getNbHabitants(),
+                    ville.getDepartement().getCode(),
+                    ville.getDepartement().getNom()
+            );
+        }
+
+        writer.flush();
+        writer.close();
     }
 }

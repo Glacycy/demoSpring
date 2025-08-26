@@ -126,5 +126,14 @@ public interface VilleRepository extends CrudRepository<Ville, Integer>, PagingA
     @Query("SELECT v FROM Ville v WHERE v.departement.id = :departementId ORDER BY v.nbHabitants DESC")
     List<Ville> findTopNVillesByDepartementOrderByNbHabitantsDesc(@Param("departementId") Integer departementId, Pageable pageable);
 
+    /**
+     * Recherche d'une ville par nom et département pour vérifier l'unicité
+     * @param nom nom de la ville
+     * @param departementId id du département
+     * @return Ville trouvée ou null
+     */
+    @Query("SELECT v FROM Ville v WHERE v.nom = :nom AND v.departement.id = :departementId")
+    Ville findByNomAndDepartementId(@Param("nom") String nom, @Param("departementId") Integer departementId);
+
     Page<Ville> findAll(Pageable pageable);
 }

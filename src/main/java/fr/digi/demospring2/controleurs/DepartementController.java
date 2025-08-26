@@ -4,6 +4,7 @@ import fr.digi.demospring2.dto.DepartementDTO;
 import fr.digi.demospring2.dto.VilleDTO;
 import fr.digi.demospring2.entities.Departement;
 import fr.digi.demospring2.entities.Ville;
+import fr.digi.demospring2.exceptions.FunctionalException;
 import fr.digi.demospring2.mappers.VilleDepartementMapper;
 import fr.digi.demospring2.repositories.DepartementRepository;
 import fr.digi.demospring2.services.DepartementService;
@@ -147,7 +148,7 @@ public class DepartementController {
      * GET /departements/{id}/plus-grandes-villes/{n} - Retourne les n plus grandes villes d'un département
      */
     @GetMapping("/{id}/plus-grandes-villes/{n}")
-    public ResponseEntity<List<VilleDTO>> getNPlusGrandesVilles(@PathVariable int id, @PathVariable int n) {
+    public ResponseEntity<List<VilleDTO>> getNPlusGrandesVilles(@PathVariable int id, @PathVariable int n) throws FunctionalException {
         if (!departementRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -168,7 +169,7 @@ public class DepartementController {
     public ResponseEntity<List<VilleDTO>> getVillesParPopulation(
             @PathVariable int id,
             @RequestParam int min,
-            @RequestParam int max) {
+            @RequestParam int max) throws FunctionalException {
 
         if (!departementRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
